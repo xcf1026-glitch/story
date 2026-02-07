@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>三和國中：數學補考驚魂夜 (語音版)</title>
+    <style>
+        body {
+            background-color: #050505;
+            color: #d1d1d1;
+            font-family: "Microsoft JhengHei", "Heiti TC", sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        #game-container {
+            width: 100%;
+            max-width: 700px;
+            background-color: #121212;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 0 30px rgba(139, 0, 0, 0.15);
+            border: 1px solid #2a2a2a;
+            position: relative;
+        }
+        h1 { 
+            color: #a30000; 
+            text-align: center; 
+            margin-top: 0;
+            text-shadow: 2px 2px 4px #000;
+        }
+        
+        /* 頂部控制列 */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+        }
+        
+        .tts-controls button {
+            background-color: #333;
+            border: 1px solid #555;
+            padding: 5px 10px;
+            font-size: 0.8rem;
+            margin-left: 5px;
+            width: auto;
+            display: inline-block;
+        }
+        .tts-controls button.active {
+            background-color: #a30000;
+            color: white;
+            border-color: #ff0000;
+        }
+
+        .sanity-box { color: #00bcd4; font-weight: bold; }
+        .sanity-low { color: #ff0000; animation: pulse 1s infinite; }
+        
+        #text { 
+            font-size: 1.15rem; 
+            line-height: 1.8; 
+            margin-bottom: 30px; 
+            min-height: 120px; 
+        }
+        .math-problem {
+            background-color: #1a1a1a;
+            border-left: 4px solid #a30000;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: "Courier New", monospace;
+            color: #fff;
+        }
+        .options { display: grid; gap: 15px; }
+        button {
+            background-color: #1f1f1f;
+            color: #ccc;
+            border: 1px solid #333;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: left;
+            font-size: 1rem;
+            border-radius: 5px;
+            width: 100%;
+        }
+        button:hover { 
+            background-color: #3a0000; 
+            border-color: #ff3333; 
+            color: #fff;
+            padding-left: 25px;
+        }
+        .ending-bad { color: #ff4444; font-weight: bold; }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <h1>三和國中：午夜禁區</h1>
+    
+    <div class="top-bar">
+        <div class="tts-controls">
+            <button id="btn-tts-toggle" onclick="toggleAutoTTS()">🔇 語音：關</button>
+            <button onclick="stopSpeaking()">🛑 停止</button>
+        </div>
+        <div id="sanity-display" class="sanity-box">理智：100%</div>
+    </div>
+    <div style="text-align: right; color: #666; font-size: 0.8rem; margin-bottom: 10px;" id="items-display">狀態：兩手空空</div>
+
+    <div id="text">正在載入惡夢...</div>
+    <div id="options" class="options"></div>
+</div>
+
+<script>
+    const textElement = document.getElementById('text');
+    const optionButtonsElement = document.getElementById('options');
+    const itemsDisplay = document.getElementById('items-display');
+    const sanityDisplay = document.getElementById('sanity-display');
+    const btnTtsToggle = document.getElementById('btn-tts-toggle');
+
+    let state = {};
+    let isAutoTTS = false; // 預設語音關閉
+    let voices = [];
+
+    // --- TTS 語音功能設定 ---
+    
+    // 載入瀏覽器支援的語音
+    function loadVoices() {
+        voices = window.speechSynthesis.getVoices();
+    }
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+
+    function toggleAutoTTS() {
+        isAutoTTS = !isAutoTTS;
+        if (isAutoTTS) {
+            btnTtsToggle.innerText = "🔊 語音：開";
+            btnTtsToggle.classList.add("active");
+            // 立即朗讀當前文字
+            speakText(stripHtml(textElement.innerHTML));
+        } else {
+            btnTtsToggle.innerText = "🔇 語音：關";
+            btnTtsToggle.classList.remove("active");
+            stopSpeaking();
+        }
+    }
+
+    function stopSpeaking() {
+        window.speechSynthesis.cancel();
+    }
+
+    function stripHtml(html) {
+        let tmp = document.createElement("DIV");
+        tmp.innerHTML = html;
+        return tmp.textContent || tmp.innerText || "";
+    }
+
+    function speakText(text) {
+        if (!isAutoTTS) return;
+
+        // 先停止上一句
+        stopSpeaking();
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        
+        // 嘗試尋找中文語音 (優先選台灣繁體，沒有則選中文)
+        const zhVoice = voices.find(v => v.lang === 'zh-TW') || voices.find(v => v.lang.includes('zh'));
+        if (zhVoice) utterance.voice = zhVoice;
+
+        // 設定恐怖氛圍參數
+        utterance.rate = 0.9;  // 語速稍慢
+        utterance.pitch = 0.8; // 音調稍低
+        utterance.volume = 1;
+
+        window.speechSynthesis.speak(utterance);
+    }
+
+    // --- 遊戲邏輯 ---
+
+    function startGame() {
+        state = {
+            hasFlashlight: false,
+            hasAmulet: false,
+            hasKey: false,
+            sanity: 100
+        };
+        updateStatus();
+        showTextNode(1);
+    }
+
+    function updateStatus() {
+        let items = [];
+        if (state.hasFlashlight) items.push("手電筒");
+        if (state.hasAmulet) items.push("平安符");
+        if (state.hasKey) items.push("頂樓鑰匙");
+        itemsDisplay.innerText = items.length > 0 ? `持有：${items.join('、')}` : "狀態：兩手空空";
+
+        sanityDisplay.innerText = `理智：${state.sanity}%`;
+        if (state.sanity <= 30) {
+            sanityDisplay.classList.add('sanity-low');
+        } else {
+            sanityDisplay.classList.remove('sanity-low');
+        }
+    }
+
+    function showTextNode(textNodeIndex) {
+        if (state.sanity <= 0) {
+            const dieText = "你的理智已經崩潰。你看著黑板上的數字開始跳舞，變成了無數張人臉...你永遠困在數學補考的地獄裡了。(結局：SAN值歸零)";
+            textElement.innerHTML = `<span class='ending-bad'>${dieText}</span>`;
+            optionButtonsElement.innerHTML = "";
+            
+            const btn = document.createElement('button');
+            btn.innerText = "重新開始";
+            btn.addEventListener('click', startGame);
+            optionButtonsElement.appendChild(btn);
+            
+            speakText(dieText); // 朗讀死亡訊息
+            return;
+        }
+
+        const textNode = textNodes.find(node => node.id === textNodeIndex);
+        textElement.innerHTML = textNode.text;
+        
+        // 觸發語音朗讀
+        speakText(stripHtml(textNode.text));
+
+        while (optionButtonsElement.firstChild) {
+            optionButtonsElement.removeChild(optionButtonsElement.firstChild);
+        }
+
+        textNode.options.forEach(option => {
+            if (showOption(option)) {
+                const button = document.createElement('button');
+                button.innerText = option.text;
+                button.addEventListener('click', () => selectOption(option));
+                optionButtonsElement.appendChild(button);
+            }
+        });
+    }
+
+    function showOption(option) {
+        return option.requiredState == null || option.requiredState(state);
+    }
+
+    function selectOption(option) {
+        const nextTextNodeId = option.nextText;
+        if (nextTextNodeId <= 0) {
+            stopSpeaking();
+            return startGame();
+        }
+        
+        if (option.setState) state = Object.assign(state, option.setState);
+        if (option.sanityCost) state.sanity -= option.sanityCost;
+
+        updateStatus();
+        showTextNode(nextTextNodeId);
+    }
+
+    // --- 劇情資料 ---
+    const textNodes = [
+        {
+            id: 1,
+            text: "半夜兩點，你翻牆回到三和國中。除了拿回手機，你心裡總覺得好像忘了做什麼作業...<br>中庭一片死寂。",
+            options: [
+                { text: "前往二樓教室 (主線)", nextText: 2 },
+                { text: "去警衛室看看 (拿手電筒)", nextText: 8 },
+                { text: "去地下一樓音樂教室", nextText: 3 }
+            ]
+        },
+        {
+            id: 8,
+            text: "警衛室沒人，桌上有一支手電筒和一本《國中數學課本》。<br>你拿起了手電筒。",
+            options: [
+                { text: "回到中庭", setState: { hasFlashlight: true }, nextText: 1 }
+            ]
+        },
+        {
+            id: 2,
+            text: "二樓走廊被一道鐵捲門擋住了。旁邊的電子鎖上貼著一張紙條：<br>「現在氣溫是 5度。氣溫先下降 8度，再上升 2度，最後下降 5度。<br>現在幾度？輸入正確溫度才能通行。」",
+            options: [
+                { text: "輸入：-6度", nextText: 100 },
+                { text: "輸入：-1度", sanityCost: 30, nextText: 101 },
+                { text: "輸入：-5度", sanityCost: 30, nextText: 101 }
+            ]
+        },
+        {
+            id: 100,
+            text: "「嗶！」電子鎖開啟，鐵捲門緩緩升起。你擦了擦冷汗，數學好險沒白學。",
+            options: [{ text: "繼續前進", nextText: 11 }]
+        },
+        {
+            id: 101,
+            text: "「嗶——錯誤！」<br>電子鎖發出刺耳的警報聲，天花板上突然掉下來一個板擦，狠狠砸在你頭上！你覺得頭暈目眩。<br>(理智 -30)",
+            options: [{ text: "再試算一次...", nextText: 2 }]
+        },
+        {
+            id: 11,
+            text: "通過鐵捲門，前面太黑了。",
+            options: [
+                { text: "摸黑前進", sanityCost: 50, nextText: 10 },
+                { text: "使用手電筒 (需手電筒)", requiredState: (s) => s.hasFlashlight, nextText: 12 }
+            ]
+        },
+        {
+            id: 10,
+            text: "你在黑暗中踢到了生物教室的人體模型...它好像咬了你一口！你嚇得魂飛魄散。<br>(理智 -50)",
+            options: [{ text: "好痛...趕快逃進教室", nextText: 5 }]
+        },
+        {
+            id: 12,
+            text: "手電筒照亮了走廊，你避開了地上的陷阱，安全抵達教室門口。",
+            options: [{ text: "進入教室", nextText: 5 }]
+        },
+        {
+            id: 5,
+            text: "你進入教室，發現講台上站著一個半透明的「鬼老師」。<br>它敲著黑板說：「這題解出來，我就讓你拿手機走人。」<br>方程式：3x - 5 = 16，求 x 是多少？",
+            options: [
+                { text: "x = 7", nextText: 102 },
+                { text: "x = 5", sanityCost: 40, nextText: 103 },
+                { text: "x = 11", sanityCost: 40, nextText: 103 }
+            ]
+        },
+        {
+            id: 102,
+            text: "鬼老師點點頭：「算你聰明，手機拿去。」<br>它指了指抽屜，你的手機就在那裡。旁邊還附贈了一張平安符。",
+            options: [
+                { text: "拿手機和平安符，快跑！", setState: { hasAmulet: true }, nextText: 16 }
+            ]
+        },
+        {
+            id: 103,
+            text: "鬼老師臉色一沉：「運算錯誤！罰站！」<br>一股無形的力量掐住了你的脖子，你感覺呼吸困難。<br>(理智 -40)",
+            options: [{ text: "咳咳...老師對不起，再給我一次機會", nextText: 5 }]
+        },
+        {
+            id: 16,
+            text: "你拿著手機衝到校門口。大門鎖著。",
+            options: [
+                { text: "翻牆 (有受傷風險)", nextText: 20 },
+                { text: "使用平安符開門 (需平安符)", requiredState: (s) => s.hasAmulet, nextText: 21 }
+            ]
+        },
+        {
+            id: 20,
+            text: "你翻牆時摔了一跤，但總算逃出來了。只是...你的數學作業好像忘在教室裡了？<br>(結局：普通的生還)",
+            options: [{ text: "重新開始", nextText: -1 }]
+        },
+        {
+            id: 21,
+            text: "平安符發出光芒，鎖自動彈開。你優雅地走出校門，不僅活了下來，數學功力還大增。<br>(結局：學霸的勝利)",
+            options: [{ text: "重新開始", nextText: -1 }]
+        },
+        {
+            id: 3,
+            text: "地下室傳來鋼琴聲...太可怕了，你決定還是先回一樓。",
+            options: [{ text: "回一樓", nextText: 1 }]
+        }
+    ];
+
+    // 初始化讀取語音
+    loadVoices();
+    startGame();
+</script>
+
+</body>
+</html>
